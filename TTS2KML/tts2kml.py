@@ -22,8 +22,8 @@ from pykml.factory import KML_ElementMaker as KML
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TRANSFORM_FILE = os.path.join(SCRIPT_DIR, "tts2lola.json")
 
-DEFAULT_ICON_SCALE = 1.7
-NEUTRAL_ICON_SCALE = 1.25
+DEFAULT_ICON_SCALE = 3
+NEUTRAL_ICON_SCALE = 3
 
 # Faction folders in render order. Each entry: (folder name, routing tag).
 # Routing is priority-ordered: the first tag a unit has wins, so a unit tagged
