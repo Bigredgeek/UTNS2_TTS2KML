@@ -1,0 +1,7 @@
+# Runtime (tts2kml.py)
+pykml
+lxml
+
+# Calibration (calibrate.py)
+numpy
+lupa

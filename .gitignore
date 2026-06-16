@@ -3,6 +3,14 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# UTNS2 project working artifacts
+# Downloaded map-tile images + generated crops (re-fetchable from the save's ImageURLs)
+_tile_images/
+# Staged save copies / generated KML inside the pipeline folder
+TTS2KML/TS_Save_*.json
+TTS2KML/*.kml
+
+
 # User-specific files
 *.rsuser
 *.suo

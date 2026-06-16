@@ -1,56 +1,89 @@
-# SOTN_TTS2KML_Merged
+# UTNS2_TTS2KML
 
-A utility to automate the processing of Tabletop Simulator (TTS) save files from the Red Strike Wargame for Song of the Nibelungs (SOTN) sessions into KML map files. This tool coordinates the conversion of all three map layers (Tactical, Strategic, and Operational) from a single save file.
+A utility to convert a Tabletop Simulator (TTS) save file from the **UTNS: Uprising**
+campaign (Red Strike wargame, Finland / Russian-border theatre) into a single KML map
+file for Google Earth / web maps. The board is one continuous map stitched from four
+tile images, and all units are exported into a single KML grouped by faction.
 
 ## Credits
 
-This project is built upon the original TTS2KML scripts created by Gronank. The individual map conversion scripts, coordinate transformation system, and KML generation logic were all originally developed by Gronank. This fork builds on that work by fixing the scripts to account for the changes to the maps in the TTS save from the early versions, generates a KML for all 3 map layers in the Red Strike TTS save, and adds a batch script that makes the process a one-click operation.
+This project is built upon the original TTS2KML scripts created by Gronank. The
+coordinate-transformation system and KML generation logic were originally developed by
+Gronank. This fork adapts that work to the UTNS: Uprising map: it collapses the old
+three-layer (Tac/Strat/Op) pipeline into a single stitched four-tile map, georeferences
+the board from town control points read off the tile imagery, and re-groups units into
+Finland / Sweden / Russia / NATO folders.
 
-Original repositories by Gronank:
+Original repository by Gronank:
 - [AnalyzeTTS](https://github.com/gronank/AnalyzeTTS)
-
 
 ## Overview
 
-The scripts works by:
-1. Taking a TTS save file containing three map layers (TacMap, StratMap, OpMap)
-2. Using transformation data (tts2lola.json) to convert game coordinates to real-world coordinates
-3. Generating KML files for each map layer with NATO and PACT unit positions
-4. Prompting you for an archive folder name and copying the outputs into a folder
-5. Combining the latest outputs into the repo root for easy web map integration
+The pipeline works in two phases:
+
+1. **Calibration (one-time, or when the map changes)** — `TTS2KML/calibrate.py` reads
+   town Ground Control Points (`town_gcps.json`) plus real-world coordinates
+   (`towns.lua`) and fits a 2D-quadratic transform, writing `TTS2KML/tts2lola.json`.
+2. **Conversion (every turn)** — `TTS2KML/tts2kml.py` reads the TTS save and
+   `tts2lola.json`, converts each on-board unit's game coordinates to real-world
+   longitude/latitude, and writes a single KML grouped by faction. `process_maps.bat`
+   orchestrates this and archives the output.
 
 ## How It Works
 
-### Map Layers
-Each map layer (Tactical, Strategic, Operational) has its own coordinate transformation system:
-- **TacMap**: Highest detail, smallest area coverage
-- **OpMap**: Medium detail, regional coverage
-- **StratMap**: Strategic overview, largest area coverage
+### The map: one stitched board from four tiles
+The map is a single continuous board assembled from four `Custom_Tile` objects
+(nicknamed `1`–`4`), each 15×15 scale and rotated `rotY=270`. They abut on a 30-unit
+grid in a diagonal-staircase layout:
 
-### Coordinate Transformation
-Each folder contains a `tts2lola.json` file that defines:
-- Map bounds in game coordinates
-- Scale factors for converting to real-world coordinates
-- Offset values for proper geo-positioning
+```
+[ 1 ][   ]     1 = top-left
+[ 2 ][ 3 ]     2 = left-center, 3 = right-center
+[   ][ 4 ]     4 = bottom-right
+```
 
-### Unit Processing
-The Python scripts:
-1. Read the TTS save file JSON
-2. Identify map objects and their transforms
-3. Convert game coordinates to real-world coordinates
-4. Sort units into NATO and PACT categories
-5. Generate KML with proper styling and organization
+Because units already carry world coordinates, the converter needs **no map-object
+lookup** — it transforms unit positions directly through the board frame stored in
+`tts2lola.json`.
+
+### Coordinate transformation
+`tts2lola.json` contains:
+- `frame` — the board origin + scale used to turn world `posX/posZ` into board-relative
+  `(x, y)` (with the `z,x` axis swap that undoes the tiles' rotation).
+- `easting` / `northing` — 2D-quadratic coefficients (`a..f`) mapping board `(x, y)` to
+  longitude / latitude. A quadratic is used because the board spans a large area
+  (≈ 1 inch TTS = 5 km) where a single linear fit would leave edge error.
+- `tiles` + `margin` — per-tile extents used to drop units that aren't on any board.
+
+### Calibration from town control points
+The tile images carry no coordinate grid, so the board is georeferenced using towns as
+control points:
+- `pixel → TTS world coordinate` is computed analytically from each tile's known
+  position, scale, and orientation.
+- `town → real lon/lat` comes from `towns.lua`.
+- `town → pixel` is recorded once in `town_gcps.json` (each town's dot location in its
+  tile image).
+
+To re-calibrate, edit `town_gcps.json` and re-run `calibrate.py` — no code changes.
+
+### Unit processing & faction grouping
+Units are sorted into one folder each, by priority:
+`Russia` (`RUS`) → `Finland` (`FIN`) → `Sweden` (`SWE`) → `NATO` (`NATO`, not FIN/SWE)
+→ `Neutral` (untagged / `Marker`). Units off all four boards are dropped.
 
 ## Requirements
 
 - Python 3.x (must be added to system PATH)
-- Folder structure must be maintained:
+- Folder structure:
   ```
-  SOTN_TTS2KML_Merged/
+  UTNS2_TTS2KML/
   ├── process_maps.bat
-  ├── AnalyzeTTS-TacMap/TTS2KML/
-  ├── AnalyzeTTS-StratMap/TTS2KML/
-  └── AnalyzeTTS-OpMap/TTS2KML/
+  └── TTS2KML/
+      ├── tts2kml.py        (converter)
+      ├── calibrate.py      (calibration)
+      ├── towns.lua         (real-world city coordinates)
+      ├── town_gcps.json    (image-derived control points)
+      └── tts2lola.json     (generated transform)
   ```
 
 ## Dependency Installation
@@ -58,14 +91,15 @@ The Python scripts:
 1. Install Python:
    - Download from https://www.python.org/downloads/
    - **Important**: Check "Add Python to PATH" during installation
-   - Restart your computer after installation
    - Verify by opening Command Prompt and typing: `python --version`
 
-2. Verify Python PATH:
-   If Python isn't recognized:
+2. Install Python packages:
+   - From the repo root, run: `pip install -r requirements.txt`
+   - Runtime needs `pykml` + `lxml`; calibration also needs `numpy` + `lupa`.
+
+3. Verify Python PATH (if Python isn't recognized):
    - Open System Properties → Advanced → Environment Variables
-   - Under "System Variables", find and select "Path"
-   - Add Python paths (typically):
+   - Under "System Variables", select "Path" and add (typically):
      ```
      C:\Users\[Username]\AppData\Local\Programs\Python\Python3x\
      C:\Users\[Username]\AppData\Local\Programs\Python\Python3x\Scripts\
@@ -73,79 +107,63 @@ The Python scripts:
 
 ## Usage
 
-1. Place your TTS save file (e.g., `TS_Save_48.json`) in the main folder
-2. Run `process_maps.bat`
-3. When prompted, enter an archive folder name (examples: `GT3`, `2025-10-21-Turn3`)
-4. Three KML files will be generated:
-   - `TacMap.kml` - Tactical layer
-   - `StratMap.kml` - Strategic layer
-   - `OpMap.kml` - Operational layer
-5. Outputs are also archived under `Archived KML's/<your-folder-name>/` alongside the original save JSON for traceability
+1. Place your TTS save file (e.g., `TS_Save_160.json`) in the repo root.
+2. Run `process_maps.bat`.
+3. When prompted, enter an archive folder name (examples: `GT3`, `2025-10-21-Turn3`).
+4. A single KML named `UTNS_<SaveName>.kml` is generated (the `<SaveName>` is read from
+   the save file and sanitized for use as a filename).
+5. The output is also archived under `Archived KML's/<your-folder-name>/` alongside the
+   original save JSON for traceability.
 
 ### Where the files go
-- Latest KMLs are copied to the repository root (for quick access)
-- A persistent copy is placed in: `Archived KML's/<your-folder-name>/`
-   - Contains: `TacMap.kml`, `StratMap.kml`, `OpMap.kml`, and the original save JSON you used
+- The latest KML is copied to the repository root (for quick access).
+- A persistent copy is placed in `Archived KML's/<your-folder-name>/`, containing the
+  generated `UTNS_<SaveName>.kml` and the original save JSON.
+
+## Recalibrating the map
+
+If the board tiles change (new images, repositioned tiles), regenerate the transform:
+
+1. Update `TTS2KML/town_gcps.json` with the new tile centers and town control points
+   (each town's pixel position in its tile image). Use ≥ 6 well-spread towns across all
+   four tiles for an accurate quadratic fit.
+2. Run:
+   ```
+   cd TTS2KML
+   python calibrate.py
+   ```
+3. `calibrate.py` prints per-town residuals (in degrees and approximate km) and the
+   maximum residual, then writes `tts2lola.json`. If a town's residual is large, fix its
+   pixel coordinates (or add refinement points) and re-run.
 
 ## Script Details
 
 ### process_maps.bat
-- Finds JSON save files in the main folder
-- Copies save file to each map's TTS2KML folder
-- Runs the Python conversion scripts
-- Collects generated KML files and copies then to the root folder
-- Prompts for an archive folder name and copies the generated KMLs + the source JSON into `Archived KML's/<name>/`
+- Finds the JSON save file in the repo root.
+- Prompts for an archive folder name.
+- Runs `TTS2KML/tts2kml.py` and copies the generated KML to the repo root and the
+  archive folder (with the source JSON).
 
-### AnalyzeTTS.py (in each map folder)
-- Calculates the coordinate transformation parameters for each map layer
-- Uses a system of known reference points (cities) to calibrate the map
-- Works in conjunction with `towns.lua` which contains real-world city coordinates
-- Process:
-  1. Loads city locations from `towns.lua` (real-world lat/long coordinates)
-  2. Finds city markers in the TTS save file by matching nicknames
-  3. Calculates transformation matrix using city positions:
-     - Compares TTS coordinates (X,Y,Z) to real-world coordinates
-     - Solves for scale and offset parameters
-     - Accounts for map rotation and mirroring
-  4. Generates `tts2lola.json` containing:
-     - Easting parameters (longitude transformation)
-     - Northing parameters (latitude transformation)
-     - Map bounds for coordinate validation
+### TTS2KML/calibrate.py
+- Loads `town_gcps.json` (tile geometry, orientation, town pixel control points) and
+  `towns.lua` (real-world coordinates).
+- Converts each control point's pixel position to a TTS world coordinate, then to the
+  board frame, and fits a 2D-quadratic transform for longitude and latitude.
+- Writes `tts2lola.json` and prints calibration residuals.
 
-### TTS2KML.py (in each map folder)
-- Creates KML files for Google Earth visualization using the pykml library
-- Implements a GeoReferencedMap class for coordinate transformation
-- Process:
-  1. Loads transformation parameters from `tts2lola.json`:
-     - Scale and offset for longitude (easting)
-     - Scale and offset for latitude (northing)
-     - Map boundary coordinates
-  2. Processes unit positions:
-     - Reads unit transforms from TTS save file
-     - Converts game coordinates to relative positions
-     - Transforms relative positions to real-world coordinates
-     - Validates positions against map boundaries
-  3. Generates KML structure:
-     - Creates unique styles for each unit type using their custom images
-     - Organizes units into separate folders:
-       * NATO forces (units with 'NATO' tag)
-       * PACT forces (units with 'WP' tag)
-       * Undefined/Neutral (all other markers)
-     - Preserves unit names, imagery, and positioning
+### TTS2KML/tts2kml.py
+- Loads `tts2lola.json` and the TTS save.
+- For each tagged unit on one of the four boards, transforms its position to lon/lat.
+- Groups units into Russia / Finland / Sweden / NATO / Neutral folders and writes a
+  single KML, preserving unit names and counter imagery.
 
 ## Troubleshooting
 
-1. **Python Path Issues**:
-   - Verify Python installation: `python --version`
-   - Check PATH environment variable
-   - Try running Python scripts manually in each folder
-
-2. **Save File Issues**:
-   - Ensure save file is valid JSON
-   - Check that map names match exactly: "TacMap", "StratMap", "OpMap"
-   - Verify unit data contains required fields (Transform, Tags, etc.)
-
-3. **KML Generation Issues**:
-   - Check tts2lola.json files are present in each TTS2KML folder
-   - Verify coordinate transformations are correct for each map
-   - Ensure unit Tags are properly set for NATO/PACT sorting
+1. **Python path issues**: verify `python --version`; check the PATH environment variable.
+2. **Save file issues**: ensure the save is valid JSON and the four map tiles are present
+   (nicknames `1`–`4`); verify units carry `Transform` and `Tags`.
+3. **Units missing from the KML**: confirm they're tagged and sit on a board tile (off-board
+   staging/reserve units are intentionally dropped). Widen `margin` in `town_gcps.json`
+   (and re-calibrate) if a board edge is clipping valid units.
+4. **Positions look skewed**: re-check the town control points in `town_gcps.json` and the
+   `orientation` block, then re-run `calibrate.py` and inspect the residuals.

@@ -1,0 +1,29 @@
+{
+    "_comment": "Image-derived Ground Control Points for calibrate.py. Tile centers are TTS world coords (posX=cx, posZ=cz), half=tile half-extent. px/py are pixel positions of each town's DOT within that tile's 3000x3000 image (origin top-left). Orientation maps image axes to world axes; this map is north-up (Russia east). 'model' may be 'auto' (default), 'affine', or 'quadratic'; auto picks affine until >=10 GCPs. Edit gcps and run: python calibrate.py",
+    "tile_size_px": 3000,
+    "model": "auto",
+    "tiles": {
+        "1": { "cx": 31.53, "cz": 16.51, "half": 15.0 },
+        "2": { "cx": 1.52, "cz": 16.51, "half": 15.0 },
+        "3": { "cx": 1.53, "cz": -13.51, "half": 15.0 },
+        "4": { "cx": -28.48, "cz": -13.51, "half": 15.0 }
+    },
+    "orientation": {
+        "swap_uv": false,
+        "u_axis": "Z",
+        "u_sign": -1,
+        "v_axis": "X",
+        "v_sign": -1
+    },
+    "margin": 0.0,
+    "gcps": [
+        { "town": "Kittila",     "tile": "1", "px": 219,  "py": 759 },
+        { "town": "Sodankyla",   "tile": "1", "px": 2436, "py": 1611 },
+        { "town": "Rovaniemi",   "tile": "2", "px": 1191, "py": 1809 },
+        { "town": "Kemijarvi",   "tile": "3", "px": 519,  "py": 1041 },
+        { "town": "Salla",       "tile": "3", "px": 2286, "py": 669 },
+        { "town": "Posio",       "tile": "4", "px": 1641, "py": 195 },
+        { "town": "Taivalkoski", "tile": "4", "px": 1761, "py": 2076 },
+        { "town": "Pudasjarvi",  "tile": "4", "px": 60,   "py": 2766 }
+    ]
+}

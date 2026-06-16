@@ -9,8 +9,10 @@ from urllib.request import Request, build_opener
 from urllib.request import HTTPRedirectHandler as BaseRedirectHandler
 from urllib.request import urlopen
 
-REPO_SLUG = "Bigredgeek/SOTN_TTS2KML_Merged"
-ASSET_NAMES = ("OpMap.kml", "StratMap.kml", "TacMap.kml")
+REPO_SLUG = "Bigredgeek/UTNS2_TTS2KML"
+# The KML asset name is derived from the save's SaveName (UTNS_<SaveName>.kml),
+# so match any .kml asset whose name starts with this prefix.
+ASSET_PREFIX = "UTNS"
 
 
 def extract_release_tag(value: str) -> str:
@@ -82,12 +84,13 @@ def fetch_direct_asset_url(asset_url: str, token: str) -> str:
 
 def resolve_direct_urls(repo_slug: str, release_tag: str, token: str) -> Dict[str, str]:
     assets = fetch_release_assets(repo_slug, release_tag, token)
-    lookup = {asset.get("name"): asset for asset in assets if asset.get("name")}
     results: Dict[str, str] = {}
 
-    for asset_name in ASSET_NAMES:
-        asset = lookup.get(asset_name)
-        if not asset:
+    for asset in assets:
+        asset_name = asset.get("name")
+        if not asset_name:
+            continue
+        if not (asset_name.startswith(ASSET_PREFIX) and asset_name.lower().endswith(".kml")):
             continue
         asset_api_url = asset.get("url")
         if not asset_api_url:
@@ -116,9 +119,8 @@ def write_links(target_dir: str, urls: Dict[str, str]) -> str:
     file_path = os.path.join(target_dir, "github_release_links.txt")
 
     with open(file_path, "w", encoding="utf-8", newline="\n") as handle:
-        for asset in ASSET_NAMES:
-            url = urls[asset]
-            handle.write(url + "\n")
+        for asset in sorted(urls):
+            handle.write(urls[asset] + "\n")
 
     return file_path
 
@@ -130,7 +132,7 @@ def main() -> int:
     parser.add_argument(
         "--repo",
         default=REPO_SLUG,
-        help="Repository slug (owner/name). Defaults to Bigredgeek/SOTN_TTS2KML_Merged.",
+        help="Repository slug (owner/name). Defaults to Bigredgeek/UTNS2_TTS2KML.",
     )
     parser.add_argument(
         "--token",
@@ -142,7 +144,7 @@ def main() -> int:
     )
     parser.add_argument(
         "release",
-        help="Release tag or full GitHub release URL (e.g. SOTN-post-GT4).",
+        help="Release tag or full GitHub release URL (e.g. UTNS-post-GT4).",
     )
     args = parser.parse_args()
 
@@ -160,10 +162,9 @@ def main() -> int:
         return 1
 
     direct_map = resolve_direct_urls(repo_slug, tag, token)
-    missing = [asset for asset in ASSET_NAMES if asset not in direct_map]
-    if missing:
+    if not direct_map:
         print(
-            f"Error: Could not resolve direct URLs for: {', '.join(missing)}",
+            f"Error: No '{ASSET_PREFIX}*.kml' assets found on release '{tag}'.",
             file=sys.stderr,
         )
         return 1
