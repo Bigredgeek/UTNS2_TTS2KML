@@ -277,9 +277,11 @@ AnalyzeTTS reads this + `towns.lua`, computes world coords, fits the quadratic, 
   (line ~13), `ASSET_NAMES = ("OpMap.kml","StratMap.kml","TacMap.kml")` (line ~14). Update both (Q10).
 - [README.md](README.md) — still documents the old 3-layer SOTN project; rewrite for single map.
 
-### New-save inspection helpers (already written, repo root)
-- [_inspect_160.py](_inspect_160.py) — dumps the 4 tiles (pos/rot/scale/url) + all nicknames.
-- [_inspect2.py](_inspect2.py) — tile grid, top-level Name counts, tag distribution, unit extent.
+### New-save inspection helpers (REMOVED — recoverable from git history)
+- `_inspect_160.py` / `_inspect2.py` — dumped the 4 tiles (pos/rot/scale/url), nicknames, tag
+  distribution, unit extent. `_grid_detect.py` / `_tile_overview.py` — tile download/crop +
+  graticule check. All four were one-time scaffolding; removed after calibration. Restore with
+  `git show <commit>:_inspect_160.py` from the "with analysis scaffolding" commit if needed.
 - Source save: [TS_Save_160.json](TS_Save_160.json) (SaveName "UTNS: Uprising v2", 154 objects).
 
 ### Transform shape reference (`tts2lola.json`)
@@ -298,9 +300,10 @@ AnalyzeTTS reads this + `towns.lua`, computes world coords, fits the quadratic, 
   upstream gronank/AnalyzeTTS).
 - Python deps used by scripts: `numpy`, `lupa` (lua54), `pykml`, `lxml`.
   - **All installed locally** (`pykml`, `lxml`, `numpy`, `lupa`). `requirements.txt` lists all four.
-- Helper inspection scripts in repo root: `_inspect_160.py`, `_inspect2.py`, `_grid_detect.py`,
-  `_tile_overview.py` (ad-hoc analysis of the new save / tiles — safe to delete once calibrated).
-- Tile images downloaded to `_tile_images/` (gitignored). Re-fetchable from the save ImageURLs.
+- Helper inspection scripts (`_inspect_160.py`, `_inspect2.py`, `_grid_detect.py`,
+  `_tile_overview.py`) were one-time scaffolding — REMOVED after calibration (in git history).
+- Tile images were downloaded to `_tile_images/` (gitignored, ~50 MB) and removed; re-fetchable
+  from the save ImageURLs via the helper script in history (or `Invoke-WebRequest`).
 
 ---
 
@@ -342,8 +345,8 @@ AnalyzeTTS reads this + `towns.lua`, computes world coords, fits the quadratic, 
 ### DONE — cleanup
 - Old `AnalyzeTTS-TacMap/StratMap/OpMap` folders DELETED (git-recoverable). New pipeline is
   the self-contained `TTS2KML/` folder.
-- Root `_*.py` helpers (`_inspect_160`, `_inspect2`, `_grid_detect`, `_tile_overview`) and
-  `_tile_images/` LEFT in place (gitignored images; helpers aid recalibration). Optional to delete.
+- Root `_*.py` helpers (`_inspect_160`, `_inspect2`, `_grid_detect`, `_tile_overview`) and the
+  `_tile_images/` download cache REMOVED (recoverable from the "with analysis scaffolding" commit).
 
 ## To improve accuracy later (optional)
 1. Add more GCPs to `town_gcps.json` (towns near board corners help most); read pixel dots off
