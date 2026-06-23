@@ -88,6 +88,22 @@ Units are sorted into one folder each, by priority:
 
 ## Dependency Installation
 
+### Easiest: run the setup script (recommended)
+
+Double-click **`setup.bat`** in the repo root (or run it from a Command Prompt). It will:
+
+- Detect whether Python is already installed.
+- If Python is missing, install it automatically via `winget` (Windows 10/11). If
+  `winget` isn't available, it tells you exactly what to download.
+- Upgrade `pip` and install every required package from `requirements.txt`
+  (`pykml`, `lxml`, `numpy`, `lupa`).
+
+It's safe to run more than once — it skips anything already installed. After a fresh
+Python install you may need to close the window and run `setup.bat` once more so the new
+Python is on your PATH.
+
+### Manual install (if you prefer)
+
 1. Install Python:
    - Download from https://www.python.org/downloads/
    - **Important**: Check "Add Python to PATH" during installation
