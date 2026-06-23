@@ -31,6 +31,14 @@ set "ARCHIVE_DIR=Archived KML's\%ARCHIVE_NAME%"
 echo Archive folder will be: "%ARCHIVE_DIR%"
 mkdir "%ARCHIVE_DIR%" 2>nul
 
+REM --- Prompt for unit filters ---
+echo.
+set "FILTER_FLAGS="
+set /p SHOW_RUSSIA=Show Russian units? (Y/N) [Y]: 
+if /I "%SHOW_RUSSIA%"=="N" set "FILTER_FLAGS=%FILTER_FLAGS% --hide-russia"
+set /p HIDE_HIDDEN=Hide units tagged "HIDDEN"? (Y/N) [N]: 
+if /I "%HIDE_HIDDEN%"=="Y" set "FILTER_FLAGS=%FILTER_FLAGS% --hide-hidden"
+
 REM --- Stage the save into the pipeline folder ---
 echo Copying save file to TTS2KML...
 copy /Y "%SAVE_FILE%" "TTS2KML\" >nul
@@ -43,7 +51,7 @@ for %%F in ("TTS2KML\*.kml") do (
 REM --- Run the converter ---
 echo Processing map...
 cd TTS2KML
-python tts2kml.py "%SAVE_FILE%"
+python tts2kml.py "%SAVE_FILE%"!FILTER_FLAGS!
 if errorlevel 1 (
     echo Error processing map
     cd ..

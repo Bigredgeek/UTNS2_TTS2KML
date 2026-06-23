@@ -11,10 +11,10 @@ Design notes:
   which drops off-board staging/reserve pieces.
 """
 
+import argparse
 import json
 import os
 import re
-import sys
 
 from lxml import etree
 from pykml.factory import KML_ElementMaker as KML
@@ -23,7 +23,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 TRANSFORM_FILE = os.path.join(SCRIPT_DIR, "tts2lola.json")
 
 DEFAULT_ICON_SCALE = 3
-NEUTRAL_ICON_SCALE = 3
+NEUTRAL_ICON_SCALE = 2
 
 # Faction folders in render order. Each entry: (folder name, routing tag).
 # Routing is priority-ordered: the first tag a unit has wins, so a unit tagged
@@ -107,6 +107,11 @@ def faction_for(tags):
     return "Neutral"
 
 
+def has_hidden_tag(tags):
+    """True if any tag is the 'HIDDEN' marker (case-insensitive)."""
+    return any(isinstance(t, str) and t.strip().upper() == "HIDDEN" for t in (tags or []))
+
+
 def icon_scale_for(tags):
     tag_set = {t for t in (tags or []) if isinstance(t, str)}
     if tag_set & {"NATO", "FIN", "SWE", "RUS"}:
@@ -180,14 +185,19 @@ def sanitize_save_name(save_name, fallback):
     return name
 
 
-def collect_units(data, crs):
+def collect_units(data, crs, hide_russia=False, hide_hidden=False):
     units = []
     for obj in data.get("ObjectStates", []):
         if obj.get("Name") not in ("Custom_Tile", "Custom_Token"):
             continue
         if obj.get("Nickname") in MAP_TILE_NICKNAMES:
             continue  # the four map tiles themselves
-        if not obj.get("Tags"):
+        tags = obj.get("Tags")
+        if not tags:
+            continue
+        if hide_hidden and has_hidden_tag(tags):
+            continue
+        if hide_russia and faction_for(tags) == "Russia":
             continue
         pos = crs.to_lola(obj.get("Transform", {}))
         if not pos:
@@ -197,16 +207,36 @@ def collect_units(data, crs):
 
 
 def main():
-    path = sys.argv[1] if len(sys.argv) > 1 else "SampleScenario.json"
+    parser = argparse.ArgumentParser(
+        description="Convert a TTS save into a stitched Finland KML map."
+    )
+    parser.add_argument(
+        "path", nargs="?", default="SampleScenario.json",
+        help="TTS save file to convert (default: SampleScenario.json).",
+    )
+    parser.add_argument(
+        "--hide-russia", action="store_true",
+        help="Exclude units routed to the Russia folder.",
+    )
+    parser.add_argument(
+        "--hide-hidden", action="store_true",
+        help="Exclude units tagged 'HIDDEN'.",
+    )
+    args = parser.parse_args()
+    path = args.path
 
     crs = GeoReferencedMap()
     with open(path, encoding="utf-8") as handle:
         data = json.load(handle)
 
-    units = collect_units(data, crs)
+    units = collect_units(
+        data, crs, hide_russia=args.hide_russia, hide_hidden=args.hide_hidden
+    )
 
     fallback = os.path.splitext(os.path.basename(path))[0]
     base_name = sanitize_save_name(data.get("SaveName"), fallback)
+    suffix = "_BLUEVIEW" if (args.hide_russia or args.hide_hidden) else "_ALL"
+    base_name = f"{base_name}{suffix}"
     output_file = f"{base_name}.kml"
 
     doc = create_kml_doc(base_name, units)

@@ -10,6 +10,13 @@ _tile_images/
 TTS2KML/TS_Save_*.json
 TTS2KML/*.kml
 
+# OPSEC: keep kriegspiel outputs and TTS saves out of Git
+# Entire archive of past turns (unfiltered KMLs + raw saves)
+Archived KML's/
+# Root-level generated KMLs and TTS save files
+/*.kml
+/TS_Save_*.json
+
 
 # User-specific files
 *.rsuser
