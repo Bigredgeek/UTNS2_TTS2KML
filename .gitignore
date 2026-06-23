@@ -16,6 +16,8 @@ Archived KML's/
 # Root-level generated KMLs and TTS save files
 /*.kml
 /TS_Save_*.json
+# Internal working/analysis note (not for distribution)
+FINLAND_MAP_WORK_NOTE.md
 
 
 # User-specific files
