@@ -34,10 +34,10 @@ mkdir "%ARCHIVE_DIR%" 2>nul
 REM --- Prompt for unit filters ---
 echo.
 set "FILTER_FLAGS="
-set /p SHOW_RUSSIA=Show Russian units? (Y/N) [Y]: 
-if /I "%SHOW_RUSSIA%"=="N" set "FILTER_FLAGS=%FILTER_FLAGS% --hide-russia"
-set /p HIDE_HIDDEN=Hide units tagged "HIDDEN"? (Y/N) [N]: 
-if /I "%HIDE_HIDDEN%"=="Y" set "FILTER_FLAGS=%FILTER_FLAGS% --hide-hidden"
+set /p SHOW_RUSSIA=Show Russian units? (Y/N) [N]: 
+if /I not "%SHOW_RUSSIA%"=="Y" set "FILTER_FLAGS=%FILTER_FLAGS% --hide-russia"
+set /p SHOW_HIDDEN=Show units tagged "HIDDEN"? (Y/N) [N]: 
+if /I not "%SHOW_HIDDEN%"=="Y" set "FILTER_FLAGS=%FILTER_FLAGS% --hide-hidden"
 
 REM --- Stage the save into the pipeline folder ---
 echo Copying save file to TTS2KML...
